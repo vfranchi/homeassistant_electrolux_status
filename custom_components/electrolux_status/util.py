@@ -616,16 +616,16 @@ def format_command_for_appliance(
             max_val = capability.get("max")
 
             # Apply step constraints as safety measure (sliders should prevent invalid values, but this handles edge cases)
-            step = capability.get("step")
-            if step is not None:
-                step = float(step)
-                if step > 0:
-                    # For sliders, we still want to ensure step compliance
-                    # Calculate from a reasonable minimum (0 for most cases if min not specified)
-                    step_base = min_val if min_val is not None else 0
-                    steps_from_base = (numeric_value - step_base) / step
-                    # Round to nearest valid step
-                    numeric_value = step_base + round(steps_from_base) * step
+            # step = capability.get("step")
+            # if step is not None:
+            #     step = float(step)
+            #     if step > 0:
+            #         # For sliders, we still want to ensure step compliance
+            #         # Calculate from a reasonable minimum (0 for most cases if min not specified)
+            #         step_base = min_val if min_val is not None else 0
+            #         steps_from_base = (numeric_value - step_base) / step
+            #         # Round to nearest valid step
+            #         numeric_value = step_base + round(steps_from_base) * step
 
             # Clamp to min/max bounds
             if min_val is not None:
