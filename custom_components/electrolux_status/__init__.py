@@ -50,7 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     refresh_token = entry.data.get(CONF_REFRESH_TOKEN) or ""
     session = async_get_clientsession(hass)
 
-    client = get_electrolux_session(api_key, access_token, refresh_token, session, hass)
+    client = get_electrolux_session(api_key, access_token, refresh_token, session, hass, entry)
     coordinator = ElectroluxCoordinator(
         hass,
         client=client,

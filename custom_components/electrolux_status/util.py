@@ -18,6 +18,9 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import issue_registry as issue_registry
 
 from .const import (
+    CONF_ACCESS_TOKEN,
+    CONF_API_KEY,
+    CONF_REFRESH_TOKEN,
     CONF_NOTIFICATION_DEFAULT,
     CONF_NOTIFICATION_DIAG,
     CONF_NOTIFICATION_WARNING,
@@ -65,14 +68,14 @@ class AuthenticationError(CommandError):
 
 
 def get_electrolux_session(
-    api_key, access_token, refresh_token, client_session, hass=None
+    api_key, access_token, refresh_token, client_session, hass=None, entry=None
 ) -> "ElectroluxApiClient":
     """Return Electrolux API Session.
 
     Note: client_session is currently unused by the underlying SDK but is kept
     for future compatibility when the SDK supports passing in a shared aiohttp session.
     """
-    return ElectroluxApiClient(api_key, access_token, refresh_token, hass)
+    return ElectroluxApiClient(api_key, access_token, refresh_token, hass, entry)
 
 
 def should_send_notification(config_entry, alert_severity, alert_status) -> bool:
@@ -715,10 +718,12 @@ class ElectroluxApiClient:
         access_token: str,
         refresh_token: str,
         hass: HomeAssistant | None = None,
+        entry: ConfigEntry | None = None,
     ):
         """Initialize the API client."""
         # Explicitly annotate hass as optional HomeAssistant
         self.hass: HomeAssistant | None = hass
+        self.entry: ConfigEntry | None = entry
         self._token_manager = TokenManager(access_token, refresh_token, api_key)
         self._client = ApplianceClient(self._token_manager)
         self._token_handler = None  # Track handler
@@ -733,9 +738,22 @@ class ElectroluxApiClient:
                     "electrolux_group_developer_sdk.auth.token_manager"
                 )
                 self._token_logger.addHandler(self._token_handler)
+                self._token_manager._on_token_update = self._on_token_update
             except Exception:
                 _LOGGER.exception("Failed to attach token refresh logger handler")
 
+    def _on_token_update(self, access_token: str, refresh_token: str, api_key: str):
+        new_data = {**self.entry.data}
+        new_data[CONF_ACCESS_TOKEN] = access_token
+        new_data[CONF_REFRESH_TOKEN] = refresh_token
+
+        _LOGGER.debug("_on_token_update: (a: %s), (r: %s)", access_token, refresh_token)
+        self.hass.config_entries.async_update_entry(
+            self.entry, 
+            data=new_data
+        )
+        return
+    
     async def _report_token_refresh_error(self, message: str) -> None:
         """Create an HA issue when token refresh fails so user can re-authenticate."""
         # Avoid passing None to Home Assistant APIs
